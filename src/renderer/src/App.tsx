@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react'
+import type { FrameInfo } from './addon'
 
 const ipcRenderer = window.electron.ipcRenderer
 type FrameFormat = "RGB" | "BGR"
@@ -7,7 +8,7 @@ const frameFormat: FrameFormat = "BGR"
 function App(): JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
-    ipcRenderer.on("frame", (event, frame) => {
+    ipcRenderer.on("frame", (event, frame: FrameInfo) => {
       // console.info("frame", frame)
       const canvas = canvasRef.current
       if (canvas) {

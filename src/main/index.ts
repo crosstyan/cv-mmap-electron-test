@@ -25,7 +25,7 @@ function cleanupFrameReceiver(): void {
   }
 }
 
-function createWindow() {
+function createWindow(): BrowserWindow {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 1280,
