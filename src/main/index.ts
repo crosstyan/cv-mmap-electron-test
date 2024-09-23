@@ -2,11 +2,9 @@ import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { createRequire } from 'module'
 import type { FrameReceiver as NativeFrameReceiver, FrameInfo } from './addon'
+import addon from "@resources/addon.node"
 
-const require = createRequire(import.meta.url)
-const addon = require("/Users/crosstyan/Code/cv-mmap-test/src/main/addon.node")
 const SHM_NAME = "/psm_default"
 const ZMQ_ADDR = "ipc:///tmp/0"
 
@@ -30,8 +28,8 @@ function cleanupFrameReceiver(): void {
 function createWindow() {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
+    width: 1280,
+    height: 720,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
@@ -43,7 +41,11 @@ function createWindow() {
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
+    setupFrameReceiver((frame) => {
+      mainWindow.webContents.send("frame", frame)
+    })
   })
+  mainWindow.on("closed", cleanupFrameReceiver)
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
@@ -81,14 +83,6 @@ app.whenReady().then(() => {
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
-  app.on("before-quit", cleanupFrameReceiver)
-
-  mainWindow.webContents.openDevTools()
-
-  setupFrameReceiver((frame) => {
-    // mainWindow.webContents.send("frame", frame)
-    mainWindow.webContents.send("frame", frame)
-  })
 })
 
 // Quit when all windows are closed, except on macOS. There, it's common
@@ -99,4 +93,3 @@ app.on('window-all-closed', () => {
     app.quit()
   }
 })
-
