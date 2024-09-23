@@ -1,33 +1,48 @@
-import Versions from './components/Versions'
-import electronLogo from './assets/electron.svg'
+import { useRef, useEffect } from 'react'
+
+const ipcRenderer = window.electron.ipcRenderer
+type FrameFormat = "RGB" | "BGR"
+const frameFormat: FrameFormat = "BGR"
 
 function App(): JSX.Element {
-  const ipcHandle = (): void => window.electron.ipcRenderer.send('ping')
-
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  useEffect(() => {
+    ipcRenderer.on("frame", (event, frame) => {
+      // console.info("frame", frame)
+      const canvas = canvasRef.current
+      if (canvas) {
+        if (canvas.width !== frame.width || canvas.height !== frame.height) {
+          canvas.width = frame.width
+          canvas.height = frame.height
+        }
+        const ctx = canvas?.getContext("2d")
+        const buf: Uint8Array = frame.data
+        const img = new ImageData(frame.width, frame.height)
+        for (let i = 0, j = 0; i < buf.length; i += 3, j += 4) {
+          if (frameFormat === "BGR") {
+            img.data[j] = buf[i + 2]
+            img.data[j + 1] = buf[i + 1]
+            img.data[j + 2] = buf[i]
+          } else if (frameFormat === "RGB") {
+            img.data[j] = buf[i]
+            img.data[j + 1] = buf[i + 1]
+            img.data[j + 2] = buf[i + 2]
+          } else {
+            throw new Error("Unsupported frame format")
+          }
+          // image data is always 4 bytes per pixel (the last byte is alpha channel, set to 255 for opaque image)
+          img.data[j + 3] = 255
+        }
+        ctx?.putImageData(img, 0, 0)
+      }
+    })
+    return () => {
+      ipcRenderer.removeAllListeners("frame")
+    }
+  })
   return (
     <>
-      <img alt="logo" className="logo" src={electronLogo} />
-      <div className="creator">Powered by electron-vite</div>
-      <div className="text">
-        Build an Electron app with <span className="react">React</span>
-        &nbsp;and <span className="ts">TypeScript</span>
-      </div>
-      <p className="tip">
-        Please try pressing <code>F12</code> to open the devTool
-      </p>
-      <div className="actions">
-        <div className="action">
-          <a href="https://electron-vite.org/" target="_blank" rel="noreferrer">
-            Documentation
-          </a>
-        </div>
-        <div className="action">
-          <a target="_blank" rel="noreferrer" onClick={ipcHandle}>
-            Send IPC
-          </a>
-        </div>
-      </div>
-      <Versions></Versions>
+      <canvas ref={canvasRef} width="640" height="480"></canvas>
     </>
   )
 }

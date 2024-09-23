@@ -1,9 +1,33 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { createRequire } from 'module'
+import type { FrameReceiver as NativeFrameReceiver, FrameInfo } from './addon'
 
-function createWindow(): void {
+const require = createRequire(import.meta.url)
+const addon = require("/Users/crosstyan/Code/cv-mmap-test/src/main/addon.node")
+const SHM_NAME = "/psm_default"
+const ZMQ_ADDR = "ipc:///tmp/0"
+
+// use global variable to avoid GC
+let frameReceiver: null | NativeFrameReceiver = null
+function setupFrameReceiver(cb: (frame: FrameInfo) => void): void {
+  frameReceiver = new addon.FrameReceiver(SHM_NAME, ZMQ_ADDR)
+  if (frameReceiver) {
+    frameReceiver.setOnFrame(cb)
+    frameReceiver.start()
+  }
+}
+
+function cleanupFrameReceiver(): void {
+  if (frameReceiver) {
+    frameReceiver.stop()
+    frameReceiver = null
+  }
+}
+
+function createWindow() {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 900,
@@ -33,6 +57,7 @@ function createWindow(): void {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+  return mainWindow
 }
 
 // This method will be called when Electron has finished
@@ -49,15 +74,20 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  // IPC test
-  ipcMain.on('ping', () => console.log('pong'))
-
-  createWindow()
+  const mainWindow = createWindow()
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
+  })
+  app.on("before-quit", cleanupFrameReceiver)
+
+  mainWindow.webContents.openDevTools()
+
+  setupFrameReceiver((frame) => {
+    // mainWindow.webContents.send("frame", frame)
+    mainWindow.webContents.send("frame", frame)
   })
 })
 
@@ -70,5 +100,3 @@ app.on('window-all-closed', () => {
   }
 })
 
-// In this file you can include the rest of your app"s specific main process
-// code. You can also put them in separate files and require them here.
