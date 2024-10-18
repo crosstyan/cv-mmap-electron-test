@@ -21,8 +21,13 @@ if (process.contextIsolated) {
   // @ts-ignore (define in dts)
   window.api = api
   window.globalFrameInfo = null
-  window.globalFrameEmitter = new EventEmitter()
+  if (window.globalFrameEmitter === undefined) {
+    window.globalFrameEmitter = new EventEmitter()
+  } else {
+    window.globalFrameEmitter.removeAllListeners()
+  }
   const setGlobalFrame = (idx: number, frame) => {
+    // frame.data = fromBGAToRGBA(frame.data)
     window.globalFrameInfo = frame
     window.globalFrameEmitter.emit('frame', {
       index: idx,
@@ -32,6 +37,8 @@ if (process.contextIsolated) {
       frame_count: frame.frame_count,
     })
   }
+  ipcRenderer.removeAllListeners('frame0')
+  ipcRenderer.removeAllListeners('frame1')
   ipcRenderer.on('frame0', (event, frame) => {
     setGlobalFrame(0, frame)
   })

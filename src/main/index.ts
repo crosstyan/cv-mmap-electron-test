@@ -36,8 +36,10 @@ function setupFrameReceiver(cb: (index: number, frames: FrameInfo) => void): voi
 
 function cleanupFrameReceiver(): void {
   for (const frameReceiver of frameReceivers) {
+    frameReceiver.setOnFrame((frame) => { })
     frameReceiver.stop()
   }
+  frameReceivers.length = 0
 }
 
 function createWindow(): BrowserWindow {
@@ -66,6 +68,7 @@ function createWindow(): BrowserWindow {
       mainWindow.webContents.send(`frame${event.index}`, tmpFrame)
     })
   })
+  mainWindow.webContents.reload()
   mainWindow.on("closed", cleanupFrameReceiver)
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
