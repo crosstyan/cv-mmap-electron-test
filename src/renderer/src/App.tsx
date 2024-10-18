@@ -1,11 +1,13 @@
 import { useRef, useEffect } from 'react'
 import type { FrameInfo } from './addon'
+import EventEmitter from 'events'
 
 const ipcRenderer = window.electron.ipcRenderer
 type FrameFormat = "RGB" | "BGR"
 const frameFormat: FrameFormat = "BGR"
 
 let tmpFrameInfo: FrameInfo | null = null
+let tmpFrameBuf: Uint8Array | null = null
 
 const setCanvas = (canvas: HTMLCanvasElement, frame: FrameInfo): void => {
   if (canvas.width !== frame.width || canvas.height !== frame.height) {
@@ -13,17 +15,17 @@ const setCanvas = (canvas: HTMLCanvasElement, frame: FrameInfo): void => {
     canvas.height = frame.height
   }
   const ctx = canvas.getContext("2d")
-  const buf: Uint8Array = frame.data
+  tmpFrameBuf = new Uint8Array(frame.data.buffer)
   const img = new ImageData(frame.width, frame.height)
-  for (let i = 0, j = 0; i < buf.length; i += 3, j += 4) {
+  for (let i = 0, j = 0; i < tmpFrameBuf.length; i += 3, j += 4) {
     if (frameFormat === "BGR") {
-      img.data[j] = buf[i + 2]
-      img.data[j + 1] = buf[i + 1]
-      img.data[j + 2] = buf[i]
+      img.data[j] = tmpFrameBuf[i + 2]
+      img.data[j + 1] = tmpFrameBuf[i + 1]
+      img.data[j + 2] = tmpFrameBuf[i]
     } else if (frameFormat === "RGB") {
-      img.data[j] = buf[i]
-      img.data[j + 1] = buf[i + 1]
-      img.data[j + 2] = buf[i + 2]
+      img.data[j] = tmpFrameBuf[i]
+      img.data[j + 1] = tmpFrameBuf[i + 1]
+      img.data[j + 2] = tmpFrameBuf[i + 2]
     } else {
       throw new Error("Unsupported frame format")
     }
@@ -36,20 +38,20 @@ const setCanvas = (canvas: HTMLCanvasElement, frame: FrameInfo): void => {
 function App(): JSX.Element {
   const canvas0Ref = useRef<HTMLCanvasElement>(null)
   const canvas1Ref = useRef<HTMLCanvasElement>(null)
-  const channel0 = "frame0"
-  const channel1 = "frame1"
   useEffect(() => {
-    ipcRenderer.on(channel0, (event, frame: FrameInfo) => {
-      tmpFrameInfo = frame
-      setCanvas(canvas0Ref.current!, tmpFrameInfo)
-    })
-    ipcRenderer.on(channel1, (event, frame: FrameInfo) => {
-      tmpFrameInfo = frame
-      setCanvas(canvas1Ref.current!, tmpFrameInfo)
+    const emitter: EventEmitter = window.globalFrameEmitter
+    emitter.on("frame", (ev: any) => {
+      if (ev.index === 0) {
+        tmpFrameInfo = window.globalFrameInfo
+        setCanvas(canvas0Ref.current!, tmpFrameInfo!)
+      } else if (ev.index === 1) {
+        tmpFrameInfo = window.globalFrameInfo
+        setCanvas(canvas1Ref.current!, tmpFrameInfo!)
+      }
     })
     return () => {
-      ipcRenderer.removeAllListeners(channel0)
-      ipcRenderer.removeAllListeners(channel1)
+      const emitter: EventEmitter = window.globalFrameEmitter
+      emitter.removeAllListeners()
     }
   })
   return (
