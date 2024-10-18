@@ -4,24 +4,39 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import type { FrameReceiver as NativeFrameReceiver, FrameInfo } from './addon'
 import addon from "@resources/addon.node"
+import EventEmitter from 'events'
 
-const SHM_NAME = "/psm_default"
-const ZMQ_ADDR = "ipc:///tmp/0"
+interface OnFrameSetEvent {
+  index: number
+}
 
-// use global variable to avoid GC
-let frameReceiver: null | NativeFrameReceiver = null
-function setupFrameReceiver(cb: (frame: FrameInfo) => void): void {
-  frameReceiver = new addon.FrameReceiver(SHM_NAME, ZMQ_ADDR)
-  if (frameReceiver) {
-    frameReceiver.setOnFrame(cb)
+const FrameSetEmitter = new EventEmitter()
+let tmpFrame: FrameInfo | null = null
+
+const SHM_NAME_LEFT = "/fl"
+const ZMQ_ADDR_LEFT = "ipc:///tmp/fl"
+const SHM_NAME_RIGHT = "/fr"
+const ZMQ_ADDR_RIGHT = "ipc:///tmp/fr"
+const frameReceivers: NativeFrameReceiver[] = []
+
+function setupFrameReceiver(cb: (index: number, frames: FrameInfo) => void): void {
+  if (frameReceivers.length > 0) {
+    return
+  }
+  frameReceivers.push(new addon.FrameReceiver(SHM_NAME_LEFT, ZMQ_ADDR_LEFT))
+  frameReceivers.push(new addon.FrameReceiver(SHM_NAME_RIGHT, ZMQ_ADDR_RIGHT))
+  for (const [idx, frameReceiver] of frameReceivers.entries()) {
+    const inner = (frame: FrameInfo): void => {
+      cb(idx, frame)
+    }
+    frameReceiver.setOnFrame(inner)
     frameReceiver.start()
   }
 }
 
 function cleanupFrameReceiver(): void {
-  if (frameReceiver) {
+  for (const frameReceiver of frameReceivers) {
     frameReceiver.stop()
-    frameReceiver = null
   }
 }
 
@@ -34,15 +49,21 @@ function createWindow(): BrowserWindow {
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
+      contextIsolation: false,
+      nodeIntegration: true,
+      sandbox: false,
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
     }
   })
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
-    setupFrameReceiver((frame) => {
-      mainWindow.webContents.send("frame", frame)
+    setupFrameReceiver((idx, frame) => {
+      tmpFrame = frame
+      FrameSetEmitter.emit('frame', { index: idx })
+    })
+    FrameSetEmitter.on('frame', (event: OnFrameSetEvent) => {
+      mainWindow.webContents.send(`frame${event.index}`, tmpFrame)
     })
   })
   mainWindow.on("closed", cleanupFrameReceiver)
