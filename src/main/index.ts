@@ -62,7 +62,6 @@ function createWindow(): BrowserWindow {
     mainWindow.show()
   })
   mainWindow.webContents.reload()
-  // mainWindow.on("closed", )
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)

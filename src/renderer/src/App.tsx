@@ -1,8 +1,6 @@
 import { useRef, useEffect } from 'react'
 import type { FrameInfo } from './addon'
-import EventEmitter from 'events'
 
-type FrameFormat = "RGB" | "BGR"
 const ipcRenderer = window.electron.ipcRenderer
 
 const setCanvas = (canvas: HTMLCanvasElement, frame: FrameInfo): void => {
@@ -27,7 +25,7 @@ function App(): JSX.Element {
     ipcRenderer.on(ch1, (event, frame: FrameInfo) => {
       setCanvas(canvas1Ref.current!, frame)
     })
-    return () => {
+    return (): void => {
       ipcRenderer.removeAllListeners(ch0)
       ipcRenderer.removeAllListeners(ch1)
     }
