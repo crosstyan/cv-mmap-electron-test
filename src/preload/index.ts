@@ -1,6 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import { EventEmitter } from 'events'
 
 // Custom APIs for renderer
 const api = {}
@@ -20,29 +19,4 @@ if (process.contextIsolated) {
   window.electron = electronAPI
   // @ts-ignore (define in dts)
   window.api = api
-  window.globalFrameInfo = null
-  if (window.globalFrameEmitter === undefined) {
-    window.globalFrameEmitter = new EventEmitter()
-  } else {
-    window.globalFrameEmitter.removeAllListeners()
-  }
-  const setGlobalFrame = (idx: number, frame) => {
-    // frame.data = fromBGAToRGBA(frame.data)
-    window.globalFrameInfo = frame
-    window.globalFrameEmitter.emit('frame', {
-      index: idx,
-      width: frame.width,
-      height: frame.height,
-      channels: frame.channels,
-      frame_count: frame.frame_count,
-    })
-  }
-  ipcRenderer.removeAllListeners('frame0')
-  ipcRenderer.removeAllListeners('frame1')
-  ipcRenderer.on('frame0', (event, frame) => {
-    setGlobalFrame(0, frame)
-  })
-  ipcRenderer.on('frame1', (event, frame) => {
-    setGlobalFrame(1, frame)
-  })
 }

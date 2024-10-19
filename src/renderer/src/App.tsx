@@ -4,9 +4,6 @@ import EventEmitter from 'events'
 
 type FrameFormat = "RGB" | "BGR"
 const ipcRenderer = window.electron.ipcRenderer
-const frameFormat: FrameFormat = "BGR"
-
-let tmpFrameInfo: FrameInfo | null = null
 
 const setCanvas = (canvas: HTMLCanvasElement, frame: FrameInfo): void => {
   if (canvas.width !== frame.width || canvas.height !== frame.height) {
@@ -21,20 +18,18 @@ const setCanvas = (canvas: HTMLCanvasElement, frame: FrameInfo): void => {
 function App(): JSX.Element {
   const canvas0Ref = useRef<HTMLCanvasElement>(null)
   const canvas1Ref = useRef<HTMLCanvasElement>(null)
+  const ch0 = "frame0"
+  const ch1 = "frame1"
   useEffect(() => {
-    const emitter: EventEmitter = window.globalFrameEmitter
-    emitter.on("frame", (ev: any) => {
-      if (ev.index === 0) {
-        tmpFrameInfo = window.globalFrameInfo
-        setCanvas(canvas0Ref.current!, tmpFrameInfo!)
-      } else if (ev.index === 1) {
-        tmpFrameInfo = window.globalFrameInfo
-        setCanvas(canvas1Ref.current!, tmpFrameInfo!)
-      }
+    ipcRenderer.on(ch0, (event, frame: FrameInfo) => {
+      setCanvas(canvas0Ref.current!, frame)
+    })
+    ipcRenderer.on(ch1, (event, frame: FrameInfo) => {
+      setCanvas(canvas1Ref.current!, frame)
     })
     return () => {
-      const emitter: EventEmitter = window.globalFrameEmitter
-      emitter.removeAllListeners()
+      ipcRenderer.removeAllListeners(ch0)
+      ipcRenderer.removeAllListeners(ch1)
     }
   })
   return (

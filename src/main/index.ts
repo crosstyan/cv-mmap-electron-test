@@ -36,7 +36,7 @@ function setupFrameReceiver(cb: (index: number, frames: FrameInfo) => void): voi
 
 function cleanupFrameReceiver(): void {
   for (const frameReceiver of frameReceivers) {
-    frameReceiver.setOnFrame((frame) => { })
+    frameReceiver.setOnFrame(() => { })
     frameReceiver.stop()
   }
   frameReceivers.length = 0
@@ -60,16 +60,9 @@ function createWindow(): BrowserWindow {
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
-    setupFrameReceiver((idx, frame) => {
-      tmpFrame = frame
-      FrameSetEmitter.emit('frame', { index: idx })
-    })
-    FrameSetEmitter.on('frame', (event: OnFrameSetEvent) => {
-      mainWindow.webContents.send(`frame${event.index}`, tmpFrame)
-    })
   })
   mainWindow.webContents.reload()
-  mainWindow.on("closed", cleanupFrameReceiver)
+  // mainWindow.on("closed", )
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
@@ -107,6 +100,15 @@ app.whenReady().then(() => {
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+
+  setupFrameReceiver((idx, frame) => {
+    tmpFrame = frame
+    FrameSetEmitter.emit('frame', { index: idx })
+  })
+  FrameSetEmitter.on('frame', (event: OnFrameSetEvent) => {
+    mainWindow.webContents.send(`frame${event.index}`, tmpFrame)
+  })
+  app.on("before-quit", cleanupFrameReceiver)
 })
 
 // Quit when all windows are closed, except on macOS. There, it's common
