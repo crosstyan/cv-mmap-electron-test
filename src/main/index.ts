@@ -30,6 +30,7 @@ function setupFrameReceiver(cb: (index: number, frames: FrameInfo) => void): voi
       cb(idx, frame)
     }
     frameReceiver.setOnFrame(inner)
+    frameReceiver.setScaleFactor(0.3)
     frameReceiver.start()
   }
 }

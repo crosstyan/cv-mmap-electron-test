@@ -20,4 +20,6 @@ export declare class FrameReceiver {
     stop(): void
 
     setOnFrame(onFrame: OnFrameCallback): void
+
+    setScaleFactor(scale: number): void
 }
