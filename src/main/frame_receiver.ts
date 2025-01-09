@@ -18,6 +18,17 @@ class FrameReceiver {
   private static _sharedBuffer: FrameInfo | null = null
   private static _emmiter: EventEmitter<FrameReceiverEventMap> = new EventEmitter()
 
+  public static get emitter(): EventEmitter<FrameReceiverEventMap> {
+    return FrameReceiver._emmiter
+  }
+
+  public static get buffer(): FrameInfo {
+    if (FrameReceiver._sharedBuffer === null) {
+      throw new Error("frame buffer is not set")
+    }
+    return FrameReceiver._sharedBuffer
+  }
+
   constructor(label: string, shmName: string, zmqAddr: string) {
     this._label = label
     this._receiver = createFrameReceiver(shmName, zmqAddr)
@@ -37,19 +48,6 @@ class FrameReceiver {
 
   public get label(): string {
     return this._label
-  }
-
-  // @note this is a shared emitter for all instances of FrameReceiver (static)
-  public static get emitter(): EventEmitter<FrameReceiverEventMap> {
-    return FrameReceiver._emmiter
-  }
-
-  // @note this is a shared buffer for all instances of FrameReceiver (static)
-  public static get buffer(): FrameInfo {
-    if (FrameReceiver._sharedBuffer === null) {
-      throw new Error("frame buffer is not set")
-    }
-    return FrameReceiver._sharedBuffer
   }
 
   public start(): boolean {
