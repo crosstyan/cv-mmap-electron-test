@@ -18,11 +18,20 @@ const setCanvas = (canvas: HTMLCanvasElement, frame: FrameInfo): void => {
   ctx?.putImageData(img, 0, 0)
 }
 
-const VideoCanvas = (props: { channel: string, style?: React.CSSProperties }): JSX.Element => {
+interface VideoCanvasProps {
+  channel: string
+  style?: React.CSSProperties
+  onFrame?: (frame: FrameInfo) => void
+}
+
+const VideoCanvas = (props: VideoCanvasProps): JSX.Element => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
     ipcRenderer.on(props.channel, (event, frame: FrameInfo) => {
       setCanvas(canvasRef.current!, frame)
+      if (props.onFrame) {
+        props.onFrame(frame)
+      }
     })
     return (): void => {
       ipcRenderer.removeAllListeners(props.channel)
@@ -35,6 +44,5 @@ const VideoCanvas = (props: { channel: string, style?: React.CSSProperties }): J
   )
 }
 
-export { VideoCanvas, videoEventName }
+export { VideoCanvas, videoEventName, FrameInfo }
 export default VideoCanvas
-

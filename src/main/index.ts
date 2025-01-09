@@ -73,17 +73,19 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  const mainWindow = createWindow()
-
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    if (BrowserWindow.getAllWindows().length === 0) { createWindow() }
   })
 
   setupFrameReceiver()
+  const mainWindow = createWindow()
   FrameReceiver.emitter.on("update", (event) => {
     mainWindow.webContents.send(`${VIDEO_CHANNEL_PREFIX}${event.label}`, FrameReceiver.buffer)
+  })
+  mainWindow.on("closed", () => {
+    FrameReceiver.emitter.removeAllListeners("update")
   })
   app.on("before-quit", cleanupFrameReceiver)
 })
